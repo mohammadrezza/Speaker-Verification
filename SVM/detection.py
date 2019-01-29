@@ -1,10 +1,12 @@
-from sklearn.svm import SVC
+from sklearn.svm import OneClassSVM
 from sklearn.decomposition import PCA
 import scipy.io.wavfile as wav
 import numpy as np
 from utility import *
 from proj_paths import *
 from SVM.feature_extraction import extract
+import os
+import time
 
 
 def pca_fit(x):
@@ -16,44 +18,39 @@ def pca_transform(x):
     return pca_x
 
 
-def classify(x, y):
-    clf = SVC(C=1, gamma='auto', probability=True)
-    clf.fit(np.array(x), np.array(y))
+def classify(x):
+    clf = OneClassSVM(kernel='rbf', degree=3, gamma='auto',
+                      coef0=0.0, tol=1e-10, nu=0.4, shrinking=True, cache_size=400,
+                      verbose=True, max_iter=-1, random_state=None)
+    clf.fit(np.array(x))
     return clf
 
 
 def keep_predicting():
     # remove previous files
-    for file in os.listdir(REAL_TIME_PATH):
-        os.remove(os.path.join(REAL_TIME_PATH, file))
     while True:
         try:
-            for file in os.listdir(REAL_TIME_PATH):
-                rate, sig = wav.read(os.path.join(REAL_TIME_PATH, file))
+            for raw_file_name, joined_file_path in collect_files(REAL_TIME_PATH):
+                rate, sig = wav.read(joined_file_path)
                 feat = extract(sig)
                 pca_feats = pca_transform([feat])
-                result = words_clf.predict(pca_feats)
-                result2 = gender_clf.predict(pca_feats)
 
+                score = clf.score_samples(pca_feats)
+                print(raw_file_name, score)
+
+                os.remove(joined_file_path)
         except Exception as e:
-            print(e.__str__())
+            # print(e.__str__())
+            pass
 
 
 if __name__ == "__main__":
     # reading the data from saved models in train
-    features = load(os.path.join(MODELS_PATH, WORDS_FEATURES))
-    words_labels = load(os.path.join(MODELS_PATH, WORDS_LABLES))
-    gender_labels = load(os.path.join(MODELS_PATH, GENDER_LABLES))
-
-    pca_obj = PCA(n_components=50, whiten=True)
+    features = load(SVM_FEATURES_NAME)
+    pca_obj = PCA(n_components=30, whiten=True)
     pca_fit(features)
     pca_feats = pca_transform(features)
-    words_clf = classify(pca_feats, words_labels)
-    gender_clf = classify(pca_feats, gender_labels)
-
-    # print("words score :", words_clf.score(pca_feats, words_labels) * 100)
-    # print("gender score :", gender_clf.score(pca_feats, gender_labels) * 100)
-
-    # either keep predicting or test a folder
-    # keep_predicting()
-    test_a_folder(".\\Test")
+    labels = [1 for _ in range(len(features))]
+    clf, clf2 = classify(pca_feats, labels)
+    keep_predicting()
+    time.sleep(1)

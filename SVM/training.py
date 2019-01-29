@@ -4,7 +4,6 @@ from proj_paths import *
 from SVM.feature_extraction import extract
 from utility import *
 
-
 if __name__ == "__main__":
 
     bar = progressbar.ProgressBar(maxval=len(collect_files(SVM_DATA_SET_PATH)),
@@ -13,7 +12,7 @@ if __name__ == "__main__":
     print("Extracting features ...")
     features = []
 
-    for i,(raw_file_name, joined_file_path) in enumerate(collect_files(SVM_DATA_SET_PATH)):
+    for i, (raw_file_name, joined_file_path) in enumerate(collect_files(SVM_DATA_SET_PATH)):
         _, sig = wav.read(joined_file_path)
         feats = extract(sig)
         features.append(feats)
@@ -22,3 +21,4 @@ if __name__ == "__main__":
     bar.finish()
     print("Done.")
 
+    save(features, SVM_FEATURES_NAME, ".")
