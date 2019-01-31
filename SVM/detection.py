@@ -20,7 +20,7 @@ def pca_transform(x):
 
 def classify(x):
     clf = OneClassSVM(kernel='rbf', degree=3, gamma='auto',
-                      coef0=0.0, tol=1e-10, nu=0.4, shrinking=True, cache_size=400,
+                      coef0=0.0, tol=1e-10, nu=0.3, shrinking=True, cache_size=400,
                       verbose=True, max_iter=-1, random_state=None)
     clf.fit(np.array(x))
     return clf
@@ -44,6 +44,27 @@ def keep_predicting():
             pass
 
 
+def cal_threshold():
+    scores = 0
+    # remove previous files
+    # while True:
+    try:
+        for raw_file_name, joined_file_path in collect_files(SVM_DATA_SET_PATH):
+            rate, sig = wav.read(joined_file_path)
+            feat = extract(sig)
+            pca_feats = pca_transform([feat])
+
+            score = clf.score_samples(pca_feats)
+            scores += score[0]
+            print(raw_file_name, score)
+
+            # os.remove(joined_file_path)
+    except Exception as e:
+        # print(e.__str__())
+        pass
+    print(scores / 125)
+
+
 if __name__ == "__main__":
     # reading the data from saved models in train
     features = load(SVM_FEATURES_NAME)
@@ -51,6 +72,6 @@ if __name__ == "__main__":
     pca_fit(features)
     pca_feats = pca_transform(features)
     labels = [1 for _ in range(len(features))]
-    clf, clf2 = classify(pca_feats, labels)
+    clf = classify(pca_feats)
     keep_predicting()
     time.sleep(1)
